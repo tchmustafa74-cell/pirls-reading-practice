@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PIRLS Reading Practice</title>
+<meta name="theme-color" content="#1e3a8a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<style>
+  :root {
+    --bg: #f0f4f8;
+    --card: #ffffff;
+    --primary: #1e3a8a;
+    --accent: #3b82f6;
+    --success: #10b981;
+    --text: #1f2937;
+    --muted: #6b7280;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    line-height: 1.6;
+  }
+  header {
+    background: var(--primary);
+    color: white;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  header h1 { margin: 0; font-size: 1.4rem; display: flex; align-items: center; gap: 0.5rem; }
+  nav { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  nav button, .btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+  nav button:hover, .btn:hover { background: #2563eb; }
+  nav button.active { background: #1d4ed8; }
+  #studentName {
+    padding: 0.45rem 0.75rem;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.9rem;
+    min-width: 140px;
+  }
+  main { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .passage-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+  .passage-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .passage-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .passage-card h3 { margin: 0 0 0.5rem; color: var(--primary); }
+  .meta { color: var(--muted); font-size: 0.85rem; }
+  .progress-bar {
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    margin-top: 0.75rem;
+    overflow: hidden;
+  }
+  .progress-fill { height: 100%; background: var(--success); width: 0%; transition: width 0.3s; }
+  .reading { white-space: pre-wrap; font-size: 1.05rem; max-height: 60vh; overflow-y: auto; padding-right: 0.5rem; }
+  .question { margin-bottom: 1.75rem; padding-bottom: 1rem; border-bottom: 1px solid #f3f4f6; }
+  .question label { display: block; font-weight: 600; margin-bottom: 0.5rem; }
+  .options label { font-weight: normal; display: block; margin: 0.35rem 0; cursor: pointer; }
+  input[type="text"], textarea {
+    width: 100%;
+    padding: 0.6rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 1rem;
+  }
+  textarea { min-height: 80px; }
+  .feedback { margin-top: 0.75rem; padding: 0.75rem; border-radius: 6px; font-size: 0.95rem; }
+  .correct { background: #ecfdf5; color: #065f46; border-left: 4px solid var(--success); }
+  .incorrect { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
+  .model { background: #eff6ff; color: #1e40af; border-left: 4px solid var(--accent); }
+  .hidden { display: none; }
+  .score-summary { font-size: 1.25rem; font-weight: 600; color: var(--primary); }
+  .dashboard-stats { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+  .stat { background: #eff6ff; padding: 1rem 1.25rem; border-radius: 8px; min-width: 140px; }
+  .stat strong { display: block; font-size: 1.5rem; color: var(--primary); }
+  footer { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📚 PIRLS Practice</h1>
+  <nav>
+    <button id="btnHome" class="active">Home</button>
+    <button id="btnProgress">Progress</button>
+    <input type="text" id="studentName" placeholder="Student name">
+  </nav>
+</header>
+<main id="app">
+  <div id="homeView">
+    <div class="card">
+      <h2>Welcome, Student!</h2>
+      <p>Practice with real PIRLS reading passages from 2006 and 2011. Read carefully, answer the questions, and track your progress. Multiple-choice questions are scored automatically. For written answers you will see model responses and scoring guidance so you can check your own work.</p>
+      <p class="meta">Your progress is saved in this browser. After each practice, download your answers (with the answer key) and send the file to your teacher so they can see your progress.</p>
+    </div>
+    <h2>Choose a Passage</h2>
+    <div class="passage-list" id="passageList"></div>
+  </div>
+
+  <div id="progressView" class="hidden">
+    <div class="card">
+      <h2>Your Progress</h2>
+      <div class="dashboard-stats" id="stats"></div>
+      <div id="progressDetails"></div>
+      <div style="margin-top:1.5rem;">
+        <button class="btn" id="exportProgress">Export All Progress & Answers</button>
+        <button class="btn" id="importProgress">Import Progress</button>
+        <input type="file" id="importFile" accept=".json" style="display:none;">
+        <button class="btn" id="resetProgress">Reset All Progress</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="practiceView" class="hidden">
+    <div class="card">
+      <button class="btn" id="backToHome">← Back to Passages</button>
+      <h2 id="practiceTitle"></h2>
+      <p class="meta" id="practiceMeta"></p>
+      <div class="reading" id="passageText"></div>
+      <hr>
+      <form id="quizForm"></form>
+      <button class="btn" type="button" id="submitQuiz">Submit Answers</button>
+      <div id="results" class="hidden"></div>
+    </div>
+  </div>
+</main>
+<footer>PIRLS practice tool • Based on released IEA PIRLS 2006 & 2011 materials • For educational use</footer>
+
+<script>
+// ===== Results form settings (fill in from the Apps Script log) =====
+const FORM_RESPONSE_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdDf8aMe7EaVRJAvDVa-Q9cegFFfJoDTNGksqHESZzdh4V14w/formResponse"; // https://docs.google.com/forms/d/e/<publishedId>/formResponse
+const ENTRY_NAME    = "entry.1673357469";      // Student Name
+const ENTRY_PASSAGE = "entry.1771448853";   // Passage
+const ENTRY_DATE    = "entry.859109211";      // Date
+const ENTRY_PERCENT = "entry.570679402";   // Score (%)
+const ENTRY_EARNED  = "entry.2054856672";    // Score (earned/total)
+const ENTRY_ANSWERS = "entry.814692902";   // Answers and Answer Key
+// =====================================================================
+function sendResultToForm(passage, answers, pct, earned, total) {
+  try {
+    const ids = [ENTRY_NAME, ENTRY_PASSAGE, ENTRY_DATE, ENTRY_PERCENT, ENTRY_EARNED, ENTRY_ANSWERS];
+    if (!/^https:\/\/docs\.google\.com\/forms\/d\/e\/.+\/formResponse$/.test(FORM_RESPONSE_URL) ||
+        ids.some(id => /PASTE/.test(id))) return; // placeholders still set: do not send
+    const nameEl = document.getElementById("studentName");
+    const lines = passage.questions.map(q => {
+      const a = answers[q.id] || "(none)";
+      return q.type === "mcq"
+        ? `${q.id}. ${q.question}\n   Answer: ${a} | Key: ${q.correct} (${a === q.correct ? "correct" : "incorrect"}) | ${q.points} pt(s)`
+        : `${q.id}. ${q.question}\n   Answer: ${a}\n   Model: ${q.model} | ${q.points} pt(s)`;
+    });
+    const body = new URLSearchParams();
+    body.append(ENTRY_NAME, (nameEl && nameEl.value.trim()) || "Anonymous");
+    body.append(ENTRY_PASSAGE, passage.title);
+    body.append(ENTRY_DATE, new Date().toLocaleString());
+    body.append(ENTRY_PERCENT, pct + "%");
+    body.append(ENTRY_EARNED, earned + "/" + total);
+    body.append(ENTRY_ANSWERS, lines.join("\n"));
+    fetch(FORM_RESPONSE_URL, { method: "POST", mode: "no-cors", body }).catch(() => {});
+  } catch (e) { /* never break the app */ }
+}
+const passages = [
+  {
+    id: "antarctica",
+    title: "Antarctica: Land of Ice",
+    year: 2006,
+    type: "Informational",
+    text: `Antarctica is a continent that is right at the south of the planet. (If you try to find it on a globe, you will see that it is at the bottom.)
+
+It takes up one-tenth of the Earth's surface and is covered with a blanket of ice that can be as thick as 1,500 metres or more. The South Pole is right in the middle of Antarctica.
+
+Antarctica is the coldest continent, as well as the driest, the highest and the windiest. Very few people live there all year round. Scientists stay there for short periods, living in specially built research stations.
+
+Summer in Antarctica is between October and March. During this time there is non-stop daylight. In winter, April to September, the opposite happens and Antarctica is plunged into six months of constant darkness.
+
+In Antarctica, it is colder than you can possibly imagine, even in the summer! The South Pole is the coldest part of Antarctica. The average temperature for January, the middle of the summer, is minus 28 degrees Celsius (written as -28°C). Minus means colder than the freezing point, which is 0°C.
+
+In the winter, April to September, the average temperature at the South Pole can be as cold as -89°C. When it is that cold, a mug of boiling water thrown in the air would freeze before it hit the ice. Sometimes the scientists have to use fridges to keep their samples warm!
+
+Penguins in Antarctica
+
+There are more penguins in the Antarctic than any other bird.
+
+They cannot fly but use their short wings as swimming flippers. They are superb swimmers. On land, they waddle upright or move in short hops.
+
+Penguins have many feathers that overlap each other. These, together with woolly down feathers and a thick layer of fat, keep out the cold air, wind and water. For extra warmth, penguins huddle together in groups.
+
+A Letter from Antarctica
+
+Sara Wheeler is one of the scientists working in Antarctica. By reading her letter to her nephew Daniel, you can learn more about her Antarctic experience.
+
+Antarctica
+Friday, 9 December
+
+Dear Daniel,
+
+Here is the letter I promised to write to you from Antarctica, and a photograph. Imagine how excited I am to be here at last, following in the footsteps of so many famous explorers. It is very different from the world I am used to.
+
+There is nothing fresh down here—and no supermarkets—so we have to eat a lot of dried, tinned or frozen food (it doesn't have to be put in the freezer—you can just leave it outside). We cook on small gas stoves, which take much longer than cookers at home. Yesterday I made noodles with tomato paste and vegetables out of a tin, followed by dried strawberries that tasted like cardboard.
+
+I miss fresh apples and oranges—I wish you could send me some!
+
+Love from Sara`,
+    questions: [
+      { id: 1, type: "short", points: 1, question: "Where can you find Antarctica on a globe?", correct: "At the bottom / south of the planet", model: "At the bottom of the globe / south of the planet." },
+      { id: 2, type: "mcq", points: 1, question: "Antarctica is the coldest place on Earth. What other records does it hold?", options: ["A. driest and cloudiest", "B. wettest and windiest", "C. windiest and driest", "D. cloudiest and highest"], correct: "C", model: "C - windiest and driest" },
+      { id: 3, type: "short", points: 1, question: "What is the coldest part of Antarctica?", correct: "The South Pole", model: "The South Pole / middle of Antarctica." },
+      { id: 4, type: "short", points: 2, question: "Think about what the article says about Antarctica. Give two reasons why most people who visit Antarctica choose not to go there between April and September.", correct: "extreme cold; constant darkness", model: "Extreme cold and six months of constant darkness. (1 point each)" },
+      { id: 5, type: "mcq", points: 1, question: "Why does the article tell you that “a mug of boiling water thrown in the air would freeze before it hit the ice”?", options: ["A. to tell you how hot the water is in Antarctica", "B. to show you what they drink in Antarctica", "C. to tell you about scientists’ jobs in Antarctica", "D. to show you how cold it is in Antarctica"], correct: "D", model: "D - to show how cold it is" },
+      { id: 6, type: "mcq", points: 1, question: "According to the article, what do penguins use their wings for?", options: ["A. flying", "B. swimming", "C. keeping chicks warm", "D. walking upright"], correct: "B", model: "B - swimming" },
+      { id: 7, type: "short", points: 3, question: "Give three ways penguins are able to keep warm in Antarctica.", correct: "overlapping feathers; woolly down; thick fat; huddling", model: "Any three: overlapping feathers, woolly down feathers, thick fat layer, huddling in groups. (1 each)" },
+      { id: 8, type: "short", points: 2, question: "What are two things you learn about food in Antarctica from Sara’s letter?", correct: "no fresh food / dried tinned frozen / no supermarkets / cook on gas / leave outside", model: "Any two: no supermarkets; dried/tinned/frozen food; food can be stored outside; cooking on gas stoves; cooking takes longer; lack of fresh fruit/food." },
+      { id: 9, type: "short", points: 2, question: "Think about whether you would like to visit Antarctica. Use what you have read in both Introducing Antarctica and A Letter from Antarctica to explain why you would or would not like to visit.", correct: "opinion + details from both texts", model: "Accept a clear yes/no opinion supported with details from BOTH the informational introduction and Sara's letter (2); one text only (1)." },
+      { id: 10, type: "mcq", points: 1, question: "Which section of the article tells you how thick the ice is in Antarctica?", options: ["A. What is Antarctica?", "B. The Weather in Antarctica", "C. Penguins in Antarctica", "D. A Letter from Antarctica"], correct: "A", model: "A - What is Antarctica?" }
+    ]
+  },
+  {
+    id: "unbelievable",
+    title: "An Unbelievable Night",
+    year: 2006,
+    type: "Literary",
+    text: `An Unbelievable Night
+by Franz Hohler
+
+Anina was ten years old, so even half asleep she could find her way from her room to the bathroom. The door to her room was usually open a crack, and the nightlight in the hallway made it light enough to get to the bathroom past the telephone stand.
+
+One night, as she passed the telephone stand on her way to the bathroom, Anina heard something that sounded like a quiet hissing. But, because she was half asleep, she didn't really pay any attention to it. Anyway, it came from pretty far away. Not until she was on her way back to her room did she see where it came from. Under the telephone stand there was a large pile of old newspapers and magazines, and this pile now began to move. That was where the noise was coming from. All of a sudden the pile started to fall over – right, left, forwards, backwards – then there were newspapers and magazines all over the floor.
+
+Anina could not believe her eyes as she watched a grunting and snorting crocodile come out from under the telephone stand. Anina was frozen to the spot. Her eyes wide as saucers, she watched the crocodile crawl completely out of the newspapers and slowly look around the apartment. It seemed to have just come out of the water because its whole body was dripping wet. Wherever the crocodile stepped, the carpet under it became drenched.
+
+The crocodile moved its head back and forth letting out a loud hissing sound. Anina swallowed hard, looking at the crocodile’s snout with its terribly long row of teeth. It swung its tail slowly back and forth. Anina had read about that in “Animal Magazine” – how the crocodile whips the water with its tail to chase away or attack its enemies.
+
+Her gaze fell on the last issue of “Animal Magazine,” which had fallen from the pile and was lying at her feet. She got another shock. The cover of the magazine used to have a picture of a crocodile on a river bank. The river bank was now empty!
+
+Anina bent down and picked up the magazine. At that moment the crocodile whipped his tail so hard that he cracked the big vase of sunflowers on the floor and the sunflowers scattered everywhere. With a quick jump Anina was in her bedroom. She slammed the door shut, grabbed her bed and pushed it up against the door. She had built a barricade that would keep her safe from the crocodile. Relieved, she let her breath out.
+
+But then she hesitated. What if the beast was simply hungry? Maybe to make the crocodile go away you had to give it something to eat?
+
+Anina looked again at the animal magazine. If the crocodile could crawl out of a picture then perhaps other animals could too. Anina hastily flipped through the magazine and stopped at a swarm of flamingos in a jungle swamp. Just right, she thought. They look like a birthday cake for crocodiles.
+
+Suddenly there was a loud crack and the tip of the crocodile’s tail pushed through the splintered door.
+
+Quickly, Anina held the picture of the flamingos up to the hole in the door and called as loud as she could, “Get out of the swamp! Shoo! Shoo!” Then she threw the magazine through the hole into the hallway, clapped her hands and yelled and screamed.
+
+She could hardly believe what happened next. The entire hallway was suddenly filled with screeching flamingos wildly flapping their wings and running around all over the place on their long, skinny legs. Anina saw one bird with a sunflower in its beak and another grabbing her mother’s hat from its hook. She also saw a flamingo disappear into the crocodile’s mouth. With two quick bites he swallowed the flamingo and quickly followed it with another, the one with the sunflower in its beak.
+
+After two portions of flamingo the crocodile seemed to have had enough and lay down contentedly in the middle of the hallway. When he had closed his eyes and no longer moved, Anina quietly opened her door and slipped through it into the hallway. She placed the empty magazine cover in front of the crocodile’s nose. “Please,” she whispered, “please go back home.” She crept back into the bedroom and looked through the hole in the door. She saw the crocodile back on the cover of the magazine.
+
+She now went cautiously into the living room where the flamingos were crowded around the sofa and standing on the television. Anina opened the magazine to the page with the empty picture. “Thank you,” she said, “thank you very much. You may now go back to your swamp.”
+
+In the morning, it was very difficult for her to explain the giant wet spot on the floor and the broken door to her parents. They weren’t convinced about the crocodile even though her mother’s hat was nowhere to be found.`,
+    questions: [
+      { id: 1, type: "mcq", points: 1, question: "What was the first sign that something unusual was happening?", options: ["A. A pile of newspapers began to move.", "B. Anina saw the magazine cover.", "C. The door to her room was broken.", "D. Anina heard a hissing sound."], correct: "D", model: "D - Anina heard a hissing sound." },
+      { id: 2, type: "mcq", points: 1, question: "Where did the crocodile come from?", options: ["A. the bathroom", "B. a magazine cover", "C. under the bed", "D. a nearby river"], correct: "B", model: "B - a magazine cover" },
+      { id: 3, type: "mcq", points: 1, question: "Which words tell you that Anina was frightened?", options: ["A. “frozen to the spot”", "B. “could not believe her eyes”", "C. “let her breath out”", "D. “sounded like a quiet hissing”"], correct: "A", model: "A - ‘frozen to the spot.’" },
+      { id: 4, type: "mcq", points: 1, question: "Why did Anina think the crocodile was going to attack?", options: ["A. It showed its long row of teeth.", "B. It let out a loud hissing sound.", "C. It started grunting and snorting.", "D. It swung its tail back and forth."], correct: "D", model: "D - It swung its tail back and forth." },
+      { id: 5, type: "short", points: 1, question: "Why did Anina call the flamingos?", correct: "to feed/distract the crocodile", model: "To feed/distract the crocodile and keep herself safe." },
+      { id: 6, type: "mcq", points: 1, question: "How did the bedroom door get broken?", options: ["A. The crocodile’s tail pushed through it.", "B. The big vase cracked against it.", "C. The flamingo’s sharp beak crashed into it.", "D. The bed smashed against it."], correct: "A", model: "A - The crocodile’s tail pushed through it. (Note: key says C for flamingo in one place, but text shows tail; use A based on story)" },
+      { id: 7, type: "short", points: 2, question: "How did the magazine help Anina? Write two ways.", correct: "learned about tail; supplied flamingos; returned animals", model: "Any two: learned a crocodile’s tail signals attack; revealed where the crocodile came from; supplied flamingos as food; enabled Anina to return the animals to the magazine." },
+      { id: 8, type: "mcq", points: 1, question: "At the end of the story, how did Anina feel toward the flamingos?", options: ["A. guilty", "B. cautious", "C. grateful", "D. annoyed"], correct: "C", model: "C - grateful" },
+      { id: 9, type: "short", points: 1, question: "Name one thing Anina had difficulty explaining to her parents.", correct: "wet spot / broken door / missing hat / etc.", model: "Any one: wet spot, broken door, missing hat, broken vase, scattered flowers." },
+      { id: 10, type: "short", points: 3, question: "You learn what Anina was like from the things she did. Describe what she was like and give two examples of what she did that show this.", correct: "trait + two actions", model: "Valid trait (e.g., clever/resourceful/brave) plus TWO supporting actions = 3; trait and one action = 2; one valid feature = 1." }
+    ]
+  },
+  {
+    id: "gianttooth",
+    title: "The Giant Tooth Mystery",
+    year: 2011,
+    type: "Informational",
+    text: `The GIANT Tooth Mystery
+
+A fossil is the remains of any creature or plant that lived on the Earth many, many years ago. People have been finding fossils for thousands of years in rocks and cliffs and beside lakes. We now know that some of these fossils were from dinosaurs.
+
+Long ago, people who found huge fossils did not know what they were. Some thought the big bones came from large animals that they had seen or read about, such as hippos or elephants. But some of the bones people found were too big to have come from even the biggest hippo or elephant. These enormous bones led some people to believe in giants.
+
+Hundreds of years ago in France, a man named Bernard Palissy had another idea. He was a famous pottery maker. When he went to make his pots, he found many tiny fossils in the clay. He studied the fossils and wrote that they were the remains of living creatures. This was not a new idea. But Bernard Palissy also wrote that some of these creatures no longer lived on earth. They had completely disappeared. They were extinct.
+
+Was Bernard Palissy rewarded for his discovery? No! He was put in prison for his ideas.
+
+As time went by, some people became more open to new ideas about how the world might have been long ago.
+
+Then, in the 1820s, a huge fossil tooth was found in England. It is thought that Mary Ann Mantell, the wife of fossil expert Gideon Mantell was out for a walk when she saw what looked like a huge stone tooth. Mary Ann Mantell knew the big tooth was a fossil, and took it home to her husband.
+
+When Gideon Mantell first looked at the fossil tooth, he thought it had belonged to a plant eater because it was flat and had ridges. It was worn down from chewing food. It was almost as big as the tooth of an elephant. But it looked nothing like an elephant's tooth.
+
+Gideon Mantell could tell that the pieces of rock attached to the tooth were very old. He knew that it was the kind of rock where reptile fossils were found. Could the tooth have belonged to a giant, plant-eating reptile that chewed its food? A type of reptile that no longer lived on earth?
+
+Gideon Mantell was really puzzled by the big tooth. No reptile that he knew about chewed its food. Reptiles gulped their food, and so their teeth didn't become worn down. It was a mystery.
+
+Gideon Mantell took the tooth to a museum in London and showed it to other scientists. No one agreed with Gideon Mantell that it might be the tooth of a gigantic reptile.
+
+Gideon Mantell tried to find a reptile that had a tooth that looked like the giant tooth. For a long time, he found nothing. Then one day he met a scientist who was studying iguanas. An iguana is a large plant-eating reptile found in Central and South America. It can grow to be more than five feet long. The scientist showed Gideon Mantell an iguana tooth. At last! Here was the tooth of a living reptile that looked like the mystery tooth. Only the fossil tooth was much, much bigger.
+
+Now Gideon Mantell believed the fossil tooth had belonged to an animal that looked like an iguana. Only it wasn’t five feet long. Gideon Mantell believed it was a hundred feet long! He named his creature Iguanodon. That means “iguana tooth”.
+
+Gideon Mantell did not have a whole Iguanodon skeleton. But from the bones he had collected over the years, he tried to figure out what one might have looked like. He thought the bones showed that the creature had walked on all four legs. He thought a pointed bone was a horn. He drew an Iguanodon with a horn on its nose.
+
+Years later, several complete Iguanodon skeletons were found. They were only about thirty feet long. The bones showed that it walked on its hind legs some of the time. And what Gideon Mantell thought was a horn on its nose was really a spike on its “thumb”! Based on these discoveries, scientists changed their ideas about what the Iguanodon looked like.
+
+Gideon Mantell made some mistakes. But he had made an important discovery, too. Since his first idea that the fossil tooth belonged to a plant-eating reptile, he spent many years gathering facts and evidence to prove his ideas were right. By making careful guesses along the way, Gideon Mantell was one of the first people to show that long ago, giant reptiles lived on earth. And then they became extinct.
+
+Hundreds of years before, Bernard Palissy had been thrown in prison for saying nearly the same thing. But Gideon Mantell became famous. His discovery made people curious to find out more about these huge reptiles.
+
+In 1842, a scientist named Richard Owen decided that these extinct reptiles needed a name of their own. He called them Dinosauria. This means “fearfully great lizard”. Today we call them dinosaurs.`,
+    questions: [
+      { id: 1, type: "mcq", points: 1, question: "What is a fossil?", options: ["A. the surface of rocks and cliffs", "B. the bones of a giant", "C. the remains of very old living things", "D. the teeth of elephants"], correct: "C", model: "C" },
+      { id: 2, type: "short", points: 1, question: "According to the article, why did some people long ago believe in giants?", correct: "found huge bones too big for known animals", model: "They found bones too big to belong to something they knew / giant bones / huge fossils." },
+      { id: 3, type: "mcq", points: 1, question: "Where did Bernard Palissy find fossils?", options: ["A. on the cliffs", "B. in the clay", "C. by a river", "D. on a path"], correct: "B", model: "B" },
+      { id: 4, type: "short", points: 1, question: "What was Bernard Palissy’s new idea?", correct: "some fossils from extinct animals", model: "Some fossils belonged to animals that no longer lived on earth / were extinct." },
+      { id: 5, type: "mcq", points: 1, question: "Why was Bernard Palissy put into prison?", options: ["A. People were not open to new ideas.", "B. He copied his ideas from Gideon Mantell.", "C. He left tiny fossils in his pottery.", "D. Studying fossils was forbidden in France."], correct: "A", model: "A" },
+      { id: 6, type: "mcq", points: 1, question: "Who found the fossil tooth in England?", options: ["A. Bernard Palissy", "B. Mary Ann Mantell", "C. Richard Owen", "D. Gideon Mantell"], correct: "B", model: "B" },
+      { id: 7, type: "mcq", points: 1, question: "What did Gideon Mantell know about reptiles that made the fossil tooth puzzling?", options: ["A. Reptiles had no teeth.", "B. Reptiles were found under rocks.", "C. Reptiles lived long ago.", "D. Reptiles gulped their food."], correct: "D", model: "D" },
+      { id: 8, type: "short", points: 2, question: "Gideon Mantell thought the tooth might have belonged to different types of animals. Explain the evidence for each idea.\nA giant creature:\nA reptile:", correct: "almost as big as elephant tooth; rock where reptile fossils found / no known reptile chewed", model: "Giant: almost as big as an elephant’s tooth. Reptile: the rock was the kind where reptile fossils were found / reptiles gulped food so teeth shouldn’t wear down." },
+      { id: 9, type: "mcq", points: 1, question: "Why did Gideon Mantell take the tooth to a museum?", options: ["A. to ask if the fossil belonged to the museum", "B. to prove that he was a fossil expert", "C. to hear what scientists thought of his idea", "D. to compare the tooth with others in the museum"], correct: "C", model: "C" },
+      { id: 10, type: "short", points: 1, question: "A scientist showed Gideon Mantell an iguana tooth. Why was this important to Gideon Mantell?", correct: "looked like the fossil tooth / living reptile with similar tooth", model: "It was the tooth of a living reptile that looked like the mystery tooth (only much bigger)." }
+    ]
+  },
+  {
+    id: "enemypie",
+    title: "Enemy Pie",
+    year: 2011,
+    type: "Literary",
+    text: `Enemy Pie
+by Derek Munson
+illustrated by Tara Calahan King
+
+It was a perfect summer until Jeremy Ross moved in right next door to my best friend Stanley. I did not like Jeremy. He had a party and I wasn't even invited. But my best friend Stanley was.
+
+I never had an enemy until Jeremy moved into the neighborhood. Dad told me that when he was my age, he had enemies, too. But he knew of a way to get rid of them.
+
+Dad pulled a worn-out scrap of paper from a recipe book.
+
+"Enemy Pie," he said, satisfied.
+
+You may be wondering what exactly is in Enemy Pie. Dad said the recipe was so secret, he couldn't even tell me. I begged him to tell me something—anything.
+
+"I will tell you this, Tom," he said to me. "Enemy Pie is the fastest known way to get rid of enemies."
+
+This got me thinking. What kinds of disgusting things would I put into Enemy Pie? I brought Dad earthworms and rocks, but he gave them right back.
+
+I went outside to play. All the while, I listened to the sounds of my dad in the kitchen. This could be a great summer after all.
+
+I tried to imagine how horrible Enemy Pie must smell. But I smelled something really good. As far as I could tell, it was coming from our kitchen. I was confused.
+
+I went inside to ask Dad what was wrong. Enemy Pie shouldn't smell this good. But Dad was smart. "If it smelled bad, your enemy would never eat it," he said. I could tell he'd made this pie before.
+
+The oven buzzer rang. Dad put on oven mitts and pulled out the pie. It looked good enough to eat! I was beginning to understand.
+
+But still, I wasn't sure how this Enemy Pie worked. What exactly did it do to enemies? Maybe it made their hair fall out, or their breath stinky. I asked Dad, but he was no help.
+
+While the pie cooled, Dad filled me in on my job.
+
+He whispered. "In order for it to work, you need to spend a day with your enemy. Even worse, you have to be nice to him. It's not easy. But that's the only way that Enemy Pie can work. Are you sure you want to do this?"
+
+Of course I was.
+
+All I had to do was spend one day with Jeremy, then he'd be out of my life. I rode my bike to his house and knocked on the door.
+
+When Jeremy opened the door, he seemed surprised.
+
+"Can you come out and play?" I asked.
+
+He looked confused. "I'll go ask my mom," he said. He came back with his shoes in his hand.
+
+We rode bikes for awhile, then ate lunch. After lunch we went over to my house.
+
+It was strange, but I was having fun with my enemy. I couldn't tell Dad that, since he had worked so hard to make the pie.
+
+We played games until my dad called us for dinner.
+
+Dad had made my favorite food. It was Jeremy's favorite, too! Maybe Jeremy wasn't so bad after all. I was beginning to think that maybe we should forget about Enemy Pie.
+
+"Dad", I said, "It sure is nice having a new friend." I was trying to tell him that Jeremy was no longer my enemy. But Dad only smiled and nodded. I think he thought I was just pretending.
+
+But after dinner, Dad brought out the pie. He dished up three plates and passed one to me and one to Jeremy.
+
+"Wow!" Jeremy said, looking at the pie.
+
+I panicked. I didn't want Jeremy to eat Enemy Pie! He was my friend!
+
+"Don't eat it!" I cried. "It's bad!"
+
+Jeremy's fork stopped before reaching his mouth. He looked at me funny. I felt relieved. I had saved his life.
+
+"If it's so bad," Jeremy asked, "then why has your dad already eaten half of it?"
+
+Sure enough, Dad was eating Enemy Pie.
+
+"Good stuff," Dad mumbled. I sat there watching them eat. Neither one of them was losing any hair! It seemed safe, so I took a tiny taste. It was delicious!
+
+After dessert, Jeremy invited me to come over to his house the next morning.
+
+As for Enemy Pie, I still don't know how to make it. I still wonder if enemies really do hate it or if their hair falls out or their breath turns bad. But I don't know if I'll ever get an answer, because I just lost my best enemy.`,
+    questions: [
+      { id: 1, type: "mcq", points: 1, question: "Who is telling the story?", options: ["A. Jeremy", "B. Dad", "C. Stanley", "D. Tom"], correct: "D", model: "D" },
+      { id: 2, type: "short", points: 1, question: "At the beginning of the story, why did Tom think Jeremy was his enemy?", correct: "not invited to party / invited Stanley not Tom", model: "Jeremy did not invite him to his party / invited Stanley but not Tom / jealous." },
+      { id: 3, type: "short", points: 1, question: "Write one ingredient that Tom thought would be in Enemy Pie.", correct: "earthworms or rocks", model: "Earthworms or rocks." },
+      { id: 4, type: "mcq", points: 1, question: "Why did Tom think it could be a great summer after all?", options: ["A. He liked playing outside.", "B. He was excited about Dad’s plan.", "C. He made a new friend.", "D. He wanted to taste Enemy Pie."], correct: "B", model: "B" },
+      { id: 5, type: "short", points: 2, question: "How did Tom feel when he first smelled Enemy Pie? Explain why he felt this way.", correct: "confused/surprised because it smelled good not bad", model: "Confused or surprised because he expected it to smell bad (made with disgusting things) but it smelled good. (2 for full, 1 for partial)" },
+      { id: 6, type: "short", points: 1, question: "What did Tom think could happen when his enemy ate Enemy Pie? Write one thing.", correct: "hair fall out / breath stink / go away / get sick", model: "Hair would fall out, breath would stink, he would go away, or something bad/sick." },
+      { id: 7, type: "short", points: 2, question: "What were the two things Tom’s dad told Tom to do for Enemy Pie to work?", correct: "spend a day with enemy AND be nice to him", model: "Spend a day with his enemy and be nice to him. (2 for both, 1 for one)" },
+      { id: 8, type: "mcq", points: 1, question: "Why did Tom go to Jeremy’s house?", options: ["A. To invite Jeremy to dinner.", "B. To ask Jeremy to leave Stanley alone.", "C. To invite Jeremy to play.", "D. To ask Jeremy to be his friend."], correct: "C", model: "C" },
+      { id: 9, type: "short", points: 1, question: "What surprised Tom about the day he spent with Jeremy?", correct: "he had fun / Jeremy not so bad / becoming friends", model: "He was actually having fun with Jeremy / they were getting along / Jeremy wasn't so bad." },
+      { id: 10, type: "mcq", points: 1, question: "At dinner, why did Tom begin to think he and his dad should forget about Enemy Pie?", options: ["A. Tom did not want to share dessert with Jeremy.", "B. Tom did not think Enemy Pie would work.", "C. Tom was beginning to like Jeremy.", "D. Tom wanted to keep Enemy Pie a secret."], correct: "C", model: "C" },
+      { id: 11, type: "mcq", points: 1, question: "How was Tom feeling when Dad passed the piece of Enemy Pie to Jeremy?", options: ["A. alarmed", "B. satisfied", "C. surprised", "D. confused"], correct: "A", model: "A" },
+      { id: 12, type: "mcq", points: 1, question: "What was it about Enemy Pie that Dad kept secret?", options: ["A. It was a normal pie.", "B. It tasted disgusting.", "C. It was his favorite food.", "D. It was a poisonous pie."], correct: "A", model: "A" },
+      { id: 13, type: "mcq", points: 1, question: "Look at this sentence from the end of the story: “After dessert, Jeremy invited me to come over to his house the next morning.” What does this suggest about the boys?", options: ["A. They are still enemies.", "B. They do not like to play at Tom’s house.", "C. They wanted to eat some more Enemy Pie.", "D. They might be friends in the future."], correct: "D", model: "D" },
+      { id: 14, type: "short", points: 1, question: "Use what you have read to explain why Tom’s dad really made Enemy Pie.", correct: "to make them friends", model: "So Tom and Jeremy would become friends / not enemies." }
+    ]
+  }
+];
+
+// Progress storage
+function loadProgress() {
+  return JSON.parse(localStorage.getItem("pirlsProgress") || "{}");
+}
+function saveProgress(data) {
+  localStorage.setItem("pirlsProgress", JSON.stringify(data));
+}
+
+let currentPassage = null;
+
+function renderHome() {
+  const list = document.getElementById("passageList");
+  const prog = loadProgress();
+  list.innerHTML = "";
+  passages.forEach(p => {
+    const best = prog[p.id] ? prog[p.id].bestScore || 0 : 0;
+    const attempts = prog[p.id] ? prog[p.id].attempts || 0 : 0;
+    const card = document.createElement("div");
+    card.className = "passage-card";
+    card.innerHTML = `
+      <h3>${p.title}</h3>
+      <div class="meta">${p.year} • ${p.type}</div>
+      <div class="meta">Best score: ${best}% • Attempts: ${attempts}</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${best}%"></div></div>
+    `;
+    card.onclick = () => startPractice(p.id);
+    list.appendChild(card);
+  });
+}
+
+function startPractice(id) {
+  currentPassage = passages.find(p => p.id === id);
+  document.getElementById("homeView").classList.add("hidden");
+  document.getElementById("progressView").classList.add("hidden");
+  document.getElementById("practiceView").classList.remove("hidden");
+  document.getElementById("practiceTitle").textContent = currentPassage.title;
+  document.getElementById("practiceMeta").textContent = `${currentPassage.year} • ${currentPassage.type}`;
+  document.getElementById("passageText").textContent = currentPassage.text;
+  document.getElementById("results").classList.add("hidden");
+  document.getElementById("results").innerHTML = "";
+  const form = document.getElementById("quizForm");
+  form.innerHTML = "";
+  currentPassage.questions.forEach(q => {
+    const div = document.createElement("div");
+    div.className = "question";
+    div.innerHTML = `<label>${q.id}. ${q.question}</label>`;
+    if (q.type === "mcq") {
+      q.options.forEach(opt => {
+        const letter = opt[0];
+        div.innerHTML += `<label><input type="radio" name="q${q.id}" value="${letter}"> ${opt}</label>`;
+      });
+    } else {
+      div.innerHTML += `<textarea name="q${q.id}" placeholder="Type your answer here..."></textarea>`;
+    }
+    form.appendChild(div);
+  });
+}
+
+function submitQuiz() {
+  if (!currentPassage) return;
+  const form = document.getElementById("quizForm");
+  const results = document.getElementById("results");
+  results.classList.remove("hidden");
+  let totalPoints = 0;
+  let earned = 0;
+  let feedbackHtml = "<h3>Results & Answer Key</h3>";
+  const attemptAnswers = {};
+
+  currentPassage.questions.forEach(q => {
+    totalPoints += q.points;
+    const name = "q" + q.id;
+    let userAns = "";
+    if (q.type === "mcq") {
+      const sel = form.querySelector(`input[name="${name}"]:checked`);
+      userAns = sel ? sel.value : "";
+      const isCorrect = userAns === q.correct;
+      if (isCorrect) earned += q.points;
+      feedbackHtml += `<div class="question"><strong>${q.id}. ${isCorrect ? "✓ Correct" : "✗ Incorrect"}</strong> (${q.points} pts)<br>Your answer: ${userAns || "(none)"}<div class="${isCorrect ? "correct" : "incorrect"} feedback"><strong>Answer Key:</strong> ${q.correct} — ${q.model}</div></div>`;
+    } else {
+      userAns = form.querySelector(`[name="${name}"]`)?.value.trim() || "";
+      const wroteSomething = userAns.length > 5;
+      if (wroteSomething) earned += q.points;
+      feedbackHtml += `<div class="question"><strong>${q.id}. Written response</strong> (${q.points} pts)<br>Your answer: ${userAns || "(none)"}<div class="model feedback"><strong>Answer Key / Model:</strong> ${q.model}<br><em>Compare carefully. Award yourself full points only if your answer covers the key ideas.</em></div></div>`;
+    }
+    attemptAnswers[q.id] = userAns;
+  });
+
+  const pct = Math.round((earned / totalPoints) * 100);
+  feedbackHtml = `<div class="score-summary">Score: ${earned} / ${totalPoints} (${pct}%)</div>` + feedbackHtml;
+  feedbackHtml += `<button class="btn" id="downloadAttempt" style="margin-top:1rem;">Download This Attempt (Answers + Key)</button>`;
+  results.innerHTML = feedbackHtml;
+
+  // Save progress with detailed answers
+  const prog = loadProgress();
+  if (!prog[currentPassage.id]) prog[currentPassage.id] = { attempts: 0, bestScore: 0, history: [] };
+  prog[currentPassage.id].attempts++;
+  if (pct > prog[currentPassage.id].bestScore) prog[currentPassage.id].bestScore = pct;
+  prog[currentPassage.id].history.push({
+    date: new Date().toISOString().slice(0,10),
+    score: pct,
+    earned,
+    total: totalPoints,
+    answers: attemptAnswers,
+    student: document.getElementById("studentName").value.trim() || "Anonymous"
+  });
+  saveProgress(prog);
+
+  document.getElementById("submitQuiz").disabled = true;
+  sendResultToForm(currentPassage, attemptAnswers, pct, earned, totalPoints);
+
+  // Wire download for this attempt
+  document.getElementById("downloadAttempt").onclick = () => downloadAttemptReport(currentPassage, attemptAnswers, pct, earned, totalPoints);
+}
+
+function renderProgress() {
+  const prog = loadProgress();
+  const stats = document.getElementById("stats");
+  const details = document.getElementById("progressDetails");
+  let totalAttempts = 0;
+  let avgBest = 0;
+  let completed = 0;
+  passages.forEach(p => {
+    const data = prog[p.id];
+    if (data) {
+      totalAttempts += data.attempts;
+      avgBest += data.bestScore || 0;
+      completed++;
+    }
+  });
+  avgBest = completed ? Math.round(avgBest / completed) : 0;
+  stats.innerHTML = `
+    <div class="stat"><strong>${completed}</strong> passages tried</div>
+    <div class="stat"><strong>${totalAttempts}</strong> total attempts</div>
+    <div class="stat"><strong>${avgBest}%</strong> average best score</div>
+  `;
+  details.innerHTML = passages.map(p => {
+    const data = prog[p.id] || { attempts: 0, bestScore: 0 };
+    return `<div class="card" style="margin-bottom:0.75rem"><strong>${p.title}</strong><br>Best: ${data.bestScore}% • Attempts: ${data.attempts}<div class="progress-bar"><div class="progress-fill" style="width:${data.bestScore}%"></div></div></div>`;
+  }).join("");
+}
+
+document.getElementById("btnHome").onclick = () => {
+  document.getElementById("homeView").classList.remove("hidden");
+  document.getElementById("progressView").classList.add("hidden");
+  document.getElementById("practiceView").classList.add("hidden");
+  document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+  document.getElementById("btnHome").classList.add("active");
+  renderHome();
+};
+document.getElementById("btnProgress").onclick = () => {
+  document.getElementById("homeView").classList.add("hidden");
+  document.getElementById("progressView").classList.remove("hidden");
+  document.getElementById("practiceView").classList.add("hidden");
+  document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+  document.getElementById("btnProgress").classList.add("active");
+  renderProgress();
+};
+document.getElementById("backToHome").onclick = () => document.getElementById("btnHome").click();
+document.getElementById("submitQuiz").onclick = submitQuiz;
+document.getElementById("resetProgress").onclick = () => {
+  if (confirm("Reset all progress? This cannot be undone.")) {
+    localStorage.removeItem("pirlsProgress");
+    renderProgress();
+    renderHome();
+  }
+};
+
+// Export full progress (for teacher)
+document.getElementById("exportProgress").onclick = () => {
+  const prog = loadProgress();
+  const student = document.getElementById("studentName").value.trim() || "Student";
+  const data = {
+    student,
+    exportedAt: new Date().toISOString(),
+    progress: prog,
+    note: "Send this file to your teacher so they can see your answers and progress."
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `PIRLS-Progress-${student.replace(/\s+/g, "-")}-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  alert("Progress file downloaded. Please email or share this file with your teacher.");
+};
+
+// Import progress
+document.getElementById("importProgress").onclick = () => document.getElementById("importFile").click();
+document.getElementById("importFile").onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (data.progress) {
+        localStorage.setItem("pirlsProgress", JSON.stringify(data.progress));
+        if (data.student) document.getElementById("studentName").value = data.student;
+        alert("Progress imported successfully!");
+        renderProgress();
+        renderHome();
+      } else {
+        alert("Invalid progress file.");
+      }
+    } catch (err) {
+      alert("Could not read the file.");
+    }
+  };
+  reader.readAsText(file);
+};
+
+// Download a single attempt report (student answers + full answer key)
+function downloadAttemptReport(passage, answers, pct, earned, total) {
+  const student = document.getElementById("studentName").value.trim() || "Student";
+  let report = `PIRLS Practice Report\n`;
+  report += `Student: ${student}\n`;
+  report += `Passage: ${passage.title} (${passage.year})\n`;
+  report += `Date: ${new Date().toLocaleDateString()}\n`;
+  report += `Score: ${earned}/${total} (${pct}%)\n\n`;
+  report += `=== STUDENT ANSWERS vs ANSWER KEY ===\n\n`;
+
+  passage.questions.forEach(q => {
+    const user = answers[q.id] || "(no answer)";
+    report += `Question ${q.id} (${q.points} pts): ${q.question}\n`;
+    report += `Your answer: ${user}\n`;
+    report += `Answer Key: ${q.type === "mcq" ? q.correct + " — " : ""}${q.model}\n`;
+    report += `\n`;
+  });
+
+  report += `\n---\nPlease send this report to your teacher to review your progress.`;
+
+  const blob = new Blob([report], { type: "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `PIRLS-Attempt-${passage.id}-${student.replace(/\s+/g, "-")}.txt`;
+  a.click();
+}
+
+// Load student name if previously saved
+const savedName = localStorage.getItem("pirlsStudentName");
+if (savedName) document.getElementById("studentName").value = savedName;
+document.getElementById("studentName").onchange = (e) => {
+  localStorage.setItem("pirlsStudentName", e.target.value.trim());
+};
+
+// Init
+renderHome();
+</script>
+</body>
+</html>
